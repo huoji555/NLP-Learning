@@ -10,3 +10,14 @@
 - ​    [总结](<https://github.com/huoji555/NLP-Learing/tree/master/doc/char_00.md>)
 
 
+
+### 2.词典分词
+
+-   [概述](<https://github.com/huoji555/NLP-Learing/tree/master/doc/char_01.md>)
+-   [词典分词](<https://github.com/huoji555/NLP-Learing/tree/master/doc/char_01.md>)
+-   [词典分类及加载](<https://github.com/huoji555/NLP-Learing/tree/master/doc/char_01.md>)
+-   [词典切分算法](<https://github.com/huoji555/NLP-Learing/tree/master/doc/char_01.md>)
+  - 全切分算法
+  - 正向最长匹配算法
+  - 逆向最长匹配算法
+  - 双向最长匹配算法
