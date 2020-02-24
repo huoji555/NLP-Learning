@@ -300,3 +300,197 @@ TreeMap<String,CoreDictionary.Attribute> dictionary = IOUtil.loadDictionary("src
 **词典切分算法总结**：
 
 由以上的表格分析，规则系统的脆弱可见一斑。规则集的维护又是是拆东墙补西墙，有时是帮倒忙。
+
+
+
+###### 5.字典树
+
+匹配算法的瓶颈之一在于**如何判断字典中是否含有字符串**，如果用的是有序集合(`TreeMap`)的话，复杂度是`O(logn)`，如果用散列表(`HashMap`)，账面上的时间复杂度虽然下降了，但内存复杂度上去了。我们要寻找一种速度又快，又省内存的数据结构。
+
+
+
+**字典树概念**：
+
+> 又称单词查找树，[Trie树](https://baike.baidu.com/item/Trie%E6%A0%91)，是一种[树形结构](https://baike.baidu.com/item/%E6%A0%91%E5%BD%A2%E7%BB%93%E6%9E%84/9663807)，是一种哈希树的变种。典型应用是用于统计，排序和保存大量的[字符](https://baike.baidu.com/item/%E5%AD%97%E7%AC%A6)串（但不仅限于字符串），所以经常被搜索引擎系统用于文本词频统计。（看图马上理解）
+
+![](https://img.51wendang.com/pic/1ca3c74ffc3ae1732176b761/2-810-jpg_6-1080-0-0-1080.jpg)
+
+
+
+**字典树特点**：
+
+- 根节点不包含字符，除根节点外每一个节点都只包含一个字符
+- 从根节点到某一节点，路径上经过的字符连接起来，为该节点对应的字符串
+- 每个节点的所有子节点包含的字符都不相同
+
+
+
+**字典树的实现原理**：
+
+从确定有限状态自动机(DFA)的角度来讲，每个节点都是一个状态，状态表示当前已经查询到的前缀。从父节点到子节点的移动过程可以看作一次`状态转移`。以下是查询步骤：
+
+- 我们输入一个想要查询的词，如果有满足条件的边，状态转移；如果找不到，直接失败
+- 完成了全部转移时，拿到了最后一个字符的状态，询问该状态是否为**终点状态**，如果是则查到了单词，否则该单词不在字典中
+
+"删改改查"都是一回事，以下不再赘述
+
+
+
+**字典树节点结构**：
+
+我们为了方便直接用数组实现
+
+```java
+private final int SIZE = 26;    //每个节点能包含的子节点数，即需要SIZE个指针来指向其孩子
+private Node root;              //字典树的根节点
+
+/**
+ *  @author: Ragty
+ *  @Date: 2020/2/24 21:10
+ *  @Description: 字典树节点
+ */
+private class Node {
+    private boolean status;   //标识该节点是否为某一字符串终端节点
+    private Node[] child;     //该节点的子节点
+
+    public Node() {
+        child = new Node[SIZE];
+        status = false;
+    }
+}
+```
+
+
+
+**字典树的实现**：
+
+```java
+/**
+* @Author Ragty
+* @Description 初始化一个节点
+* @Date   2020/2/24 21:11
+*/
+public TrieTree() {
+    root = new Node();
+}
+
+
+
+/**
+ * @Author Ragty
+ * @Description 在字典树中插入一个单词
+ * @Date   2020/2/23 21:42
+ */
+public void insert(String word) {
+    if (word == null || word.isEmpty()) {
+        return;
+    }
+
+    Node pNode = this.root;
+    for (int i = 0; i < word.length(); i++)
+    {
+        int index = word.charAt(i) - 'a';
+        if (pNode.child[index] == null) {   //如果不存在节点，则新建一个节点插入
+            Node tmpNode = new Node();
+            pNode.child[index] = tmpNode;
+        }
+        pNode = pNode.child[index];         //指向下一层
+    }
+    pNode.status = true;
+}
+
+
+
+/**
+ *  @author: Ragty
+ *  @Date: 2020/2/24 21:15
+ *  @Description: 检查字典树中是否完全包含字符串
+ */
+public boolean hasStr(String word) {
+    Node pNode = this.root;
+
+    //逐个字符去检查
+    for (int i = 0; i < word.length(); i++) {
+        int index = word.charAt(i) - 'a';
+        //在字典树中没有对应的节点，或者word字符串的最后一个字符在字典树中检测对应节点的isStr属性为false，则返回false
+        if (pNode.child[index] == null
+                || (i + 1 == word.length() && pNode.child[index].status == false)) {
+            return false;
+        }
+        pNode = pNode.child[index];
+    }
+
+    return true;
+}
+
+
+
+/**
+ *  @author: Ragty
+ *  @Date: 2020/2/24 21:21
+ *  @Description: 先序遍历
+ */
+public void preWalk(Node root) {
+    Node pNode = root;
+    for (int i = 0; i < SIZE; i++) {
+        if (pNode.child[i] != null) {
+            System.out.print((char) ('a' + i) + "--");
+            preWalk(pNode.child[i]);
+        }
+    }
+}
+
+
+
+/**
+ *  @author: Ragty
+ *  @Date: 2020/2/24 21:17
+ *  @Description: 返回字典树的根节点
+ */
+public Node getRoot() {
+    return root;
+}
+```
+
+
+
+**测试**：
+
+```java
+public static void main(String[] args) {
+    TrieTree trieTree = new TrieTree();
+    trieTree.insert("sad");
+    trieTree.insert("say");
+    trieTree.insert("to");
+    trieTree.insert("too");
+
+    System.out.println(trieTree.hasStr("say"));
+    System.out.println(trieTree.hasStr("toooo"));
+
+    Node root = trieTree.getRoot();
+    trieTree.preWalk(root);
+
+}
+```
+
+
+
+**测试结果**：
+
+```java
+true
+false
+s--a--d--y--t--o--o--
+```
+
+
+
+**算法分析**：
+
+当字典大小为n时，虽然最坏情怀下字典树的复杂度依然是O(logn)。但它的实际速度比二分查找快，这是因为随着路径的深入，前缀匹配是递进的过程，算法不必比较字符串的前缀，因此可以节省很多用来比较的时间。
+
+
+
+**算法改进**：
+
+这里我们查询某个词的时候还需要逐个对比，若我们将对象转换为散列值，散列函数输出区间为[0,65535]之间的整数，这时候我们直接访问下标就可以访问到对应的字符，不过这种做法只适用于第一行，否则会内存指数膨胀，后边的按数组存放即可，查询时直接二分法查询。
