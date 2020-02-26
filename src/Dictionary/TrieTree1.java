@@ -1,6 +1,8 @@
 package Dictionary;
 
+import javax.xml.soap.Node;
 import java.util.HashMap;
+import java.util.Map;
 
 public class TrieTree1 {
 
@@ -10,7 +12,7 @@ public class TrieTree1 {
     * @Date   2020/2/27 0:00
     */
     class TrieNode {
-        public int path;
+        public int path;        //表示多少个词共用该前缀
         public boolean status;
         public HashMap<Character, TrieNode> map;
 
@@ -105,7 +107,7 @@ public class TrieTree1 {
     /**
      *  @author: Ragty
      *  @Date: 2020/2/27 0:07
-     *  @Description: 前缀遍历，查找词，若有返回词的长度，没有返回0
+     *  @Description: 前缀遍历，若有前缀，返回它最后一个节点的path
      */
     public int prefixNumber(String pre) {
         if (pre == null)
@@ -121,16 +123,45 @@ public class TrieTree1 {
     }
 
 
+    /**
+     *  @author: Ragty
+     *  @Date: 2020/2/27 0:50
+     *  @Description: 前序遍历
+     */
+    public void preWalk(TrieNode root) {
+        TrieNode node = root;
+        for (Map.Entry<Character,TrieNode> map : root.map.entrySet()) {
+            node = map.getValue();
+            if (node != null) {
+                System.out.println(map.getKey());
+                preWalk(node);
+            }
+        }
+    }
+
+
+    public TrieNode getRoot() {
+        return root;
+    }
+
+
+
     public static void main(String[] args) {
         TrieTree1 trieTree = new TrieTree1();
 
         trieTree.insert("字典树");
+        trieTree.insert("字典书");
         trieTree.insert("字典");
         trieTree.insert("天气");
         trieTree.insert("气人");
 
         System.out.println(trieTree.search("字典"));
         System.out.println(trieTree.search("字"));
+        System.out.println(trieTree.prefixNumber("字典树"));
+
+        TrieNode root = trieTree.getRoot();
+
+        trieTree.preWalk(root);
 
     }
 
