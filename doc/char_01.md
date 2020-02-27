@@ -338,24 +338,23 @@ TreeMap<String,CoreDictionary.Attribute> dictionary = IOUtil.loadDictionary("src
 
 **字典树节点结构**：
 
-我们为了方便直接用数组实现
+这里我们用`HashMap`实现
 
 ```java
-private final int SIZE = 26;    //每个节点能包含的子节点数，即需要SIZE个指针来指向其孩子
-private Node root;              //字典树的根节点
-
 /**
- *  @author: Ragty
- *  @Date: 2020/2/24 21:10
- *  @Description: 字典树节点
- */
-private class Node {
-    private boolean status;   //标识该节点是否为某一字符串终端节点
-    private Node[] child;     //该节点的子节点
+* @Author Ragty
+* @Description  字典树节点
+* @Date   2020/2/27 0:00
+*/
+class TrieNode {
+    public int path;        //表示多少个词共用该前缀
+    public boolean status;
+    public HashMap<Character, TrieNode> map;
 
-    public Node() {
-        child = new Node[SIZE];
+    public TrieNode() {
+        path = 0;
         status = false;
+        map = new HashMap<>();
     }
 }
 ```
@@ -365,91 +364,125 @@ private class Node {
 **字典树的实现**：
 
 ```java
+private TrieNode root;
+
+
 /**
-* @Author Ragty
-* @Description 初始化一个节点
-* @Date   2020/2/24 21:11
-*/
-public TrieTree() {
-    root = new Node();
+ *  @author: Ragty
+ *  @Date: 2020/2/27 0:01
+ *  @Description: 初始化
+ */
+public TrieTree1() {
+    root = new TrieNode();
 }
 
 
 
 /**
- * @Author Ragty
- * @Description 在字典树中插入一个单词
- * @Date   2020/2/23 21:42
+ *  @author: Ragty
+ *  @Date: 2020/2/27 0:02
+ *  @Description: 插入节点
  */
 public void insert(String word) {
     if (word == null || word.isEmpty()) {
         return;
     }
-
-    Node pNode = this.root;
-    for (int i = 0; i < word.length(); i++)
-    {
-        int index = word.charAt(i) - 'a';
-        if (pNode.child[index] == null) {   //如果不存在节点，则新建一个节点插入
-            Node tmpNode = new Node();
-            pNode.child[index] = tmpNode;
+    TrieNode node = root;
+    node.path++;
+    char[] words = word.toCharArray();
+    for (int i = 0; i < words.length; i++) {
+        if (node.map.get(words[i]) == null) {
+            node.map.put(words[i], new TrieNode());
         }
-        pNode = pNode.child[index];         //指向下一层
+        node = node.map.get(words[i]);
+        node.path++;
     }
-    pNode.status = true;
+    node.status = true;
 }
-
 
 
 /**
  *  @author: Ragty
- *  @Date: 2020/2/24 21:15
- *  @Description: 检查字典树中是否完全包含字符串
+ *  @Date: 2020/2/27 0:02
+ *  @Description: 寻找节点
  */
-public boolean hasStr(String word) {
-    Node pNode = this.root;
-
-    //逐个字符去检查
-    for (int i = 0; i < word.length(); i++) {
-        int index = word.charAt(i) - 'a';
-        //在字典树中没有对应的节点，或者word字符串的最后一个字符在字典树中检测对应节点的isStr属性为false，则返回false
-        if (pNode.child[index] == null
-                || (i + 1 == word.length() && pNode.child[index].status == false)) {
+public boolean search(String word) {
+    if (word == null)
+        return false;
+    TrieNode node = root;
+    char[] words = word.toCharArray();
+    for (int i = 0; i < words.length; i++) {
+        if (node.map.get(words[i]) == null)
             return false;
-        }
-        pNode = pNode.child[index];
+        node = node.map.get(words[i]);
     }
-
-    return true;
+    return node.status;
 }
+
+
+/**
+ *  @author: Ragty
+ *  @Date: 2020/2/27 0:06
+ *  @Description: 删除节点
+ */
+public void delete(String word) {
+    if (search(word)) {
+        char[] words = word.toCharArray();
+        TrieNode node = root;
+        node.path--;
+        for (int i = 0; i < words.length; i++) {
+            if (--node.map.get(words[i]).path == 0) {
+                node.map.remove(words[i]);
+                return;
+            }
+            node = node.map.get(words[i]);
+        }
+    }
+}
+
 
 
 
 /**
  *  @author: Ragty
- *  @Date: 2020/2/24 21:21
- *  @Description: 先序遍历
+ *  @Date: 2020/2/27 0:07
+ *  @Description: 前缀遍历，若有前缀，返回它最后一个节点的path
  */
-public void preWalk(Node root) {
-    Node pNode = root;
-    for (int i = 0; i < SIZE; i++) {
-        if (pNode.child[i] != null) {
-            System.out.print((char) ('a' + i) + "--");
-            preWalk(pNode.child[i]);
+public int prefixNumber(String pre) {
+    if (pre == null)
+        return 0;
+    TrieNode node = root;
+    char[] pres = pre.toCharArray();
+    for (int i = 0; i < pres.length; i++) {
+        if (node.map.get(pres[i]) == null)
+            return 0;
+        node = node.map.get(pres[i]);
+    }
+    return node.path;
+}
+
+
+/**
+ *  @author: Ragty
+ *  @Date: 2020/2/27 0:50
+ *  @Description: 前序遍历
+ */
+public void preWalk(TrieNode root) {
+    TrieNode node = root;
+    for (Map.Entry<Character,TrieNode> map : root.map.entrySet()) {
+        node = map.getValue();
+        if (node != null) {
+            System.out.println(map.getKey());
+            preWalk(node);
         }
     }
 }
 
 
-
-/**
- *  @author: Ragty
- *  @Date: 2020/2/24 21:17
- *  @Description: 返回字典树的根节点
- */
-public Node getRoot() {
+public TrieNode getRoot() {
     return root;
 }
+
 ```
 
 
@@ -458,16 +491,20 @@ public Node getRoot() {
 
 ```java
 public static void main(String[] args) {
-    TrieTree trieTree = new TrieTree();
-    trieTree.insert("sad");
-    trieTree.insert("say");
-    trieTree.insert("to");
-    trieTree.insert("too");
+    TrieTree1 trieTree = new TrieTree1();
 
-    System.out.println(trieTree.hasStr("say"));
-    System.out.println(trieTree.hasStr("toooo"));
+    trieTree.insert("字典树");
+    trieTree.insert("字典书");
+    trieTree.insert("字典");
+    trieTree.insert("天气");
+    trieTree.insert("气人");
 
-    Node root = trieTree.getRoot();
+    System.out.println(trieTree.search("字典"));
+    System.out.println(trieTree.search("字"));
+    System.out.println(trieTree.prefixNumber("字典树"));
+
+    TrieNode root = trieTree.getRoot();
+
     trieTree.preWalk(root);
 
 }
@@ -480,7 +517,7 @@ public static void main(String[] args) {
 ```java
 true
 false
-s--a--d--y--t--o--o--
+气--人--字--典--树--书--天--气
 ```
 
 
