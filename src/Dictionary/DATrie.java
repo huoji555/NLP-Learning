@@ -63,30 +63,34 @@ public class DATrie {
 
     /**
      *  @author: Ragty
-     *  @Date: 2020/3/5 16:06
+     *  @Date: 2020/3/10 19:37
      *  @Description: 构造DATrie
      */
     public void build(List<String> words) {
         init();
 
-        int pos = 0;
-        for (int c = 0; c < words.size(); c++) {
-            for (int idx = 0; idx < words.size(); idx++)
-            {
-                char chars[] = words.get(idx).toCharArray();
-                if (chars.length > pos)
-                {
-                    int startState = 0;
-                    for (int i = 0; i <= pos-1; i++)
-                    {
-                        System.out.println(chars[i]);
-                        startState = transfer(startState, getCode(chars[i]));
-                    }
-                    TrieNode node = insert(startState, getCode(chars[pos]), (chars.length == pos+1), idx);
-                    node.setLabel(chars[pos]);
+        boolean shut = false;
+        for (int idx = 0; idx < words.size(); idx++)
+        {
+            int startState = 0;
+            char chars[] = words.get(idx).toCharArray();
+
+            if (shut == false) {
+                TrieNode node = insert(startState, getCode(chars[0]), (chars.length == 1), idx);
+                node.setLabel(chars[0]);
+            } else {
+                for (int j=1; j<chars.length; j++) {
+                    startState = transfer(startState, getCode(chars[j-1]));
+                    TrieNode node = insert(startState, getCode(chars[j]), (chars.length == j+1), idx);
+                    node.setLabel(chars[j]);
                 }
             }
-            pos++;
+
+            if (idx == words.size()-1 && shut == false) {
+                idx = -1;   //因为开始的时候还有一个加的过程
+                shut = true;
+            }
+
         }
     }
 
@@ -95,7 +99,7 @@ public class DATrie {
     /**
      *  @author: Ragty
      *  @Date: 2020/3/5 18:54
-     *  @Description: 查询匹配项
+     *  @Description: 查询匹配项(正向匹配)
      */
     public List<Integer> match(String keyWord) {
         List<Integer> result = new ArrayList<Integer>();
@@ -138,27 +142,6 @@ public class DATrie {
             }
         }
         System.out.println();
-        System.out.printf("%5s", "base");
-        for (int i = 0; i < ARRAY_SIZE; i++) {
-            if (base[i].getTransferRatio() != BASE_NULL) {
-                System.out.printf("%7d\t", base[i].getTransferRatio());
-            }
-        }
-        System.out.println();
-        System.out.printf("%5s", "leaf");
-        for (int i = 0; i < ARRAY_SIZE; i++) {
-            if (base[i].getTransferRatio() != BASE_NULL) {
-                System.out.printf("%7d\t", base[i].isLeaf() ? 1 : 0);
-            }
-        }
-        System.out.println();
-        System.out.printf("%5s", "idx");
-        for (int i = 0; i < ARRAY_SIZE; i++) {
-            if (base[i].getTransferRatio() != BASE_NULL) {
-                System.out.printf("%7d\t", base[i].getValue());
-            }
-        }
-        System.out.println();
         System.out.printf("%5s", "char");
         for (int i = 0; i < ARRAY_SIZE; i++) {
             if (base[i].getTransferRatio() != BASE_NULL) {
@@ -166,10 +149,31 @@ public class DATrie {
             }
         }
         System.out.println();
+        System.out.printf("%5s", "base");
+        for (int i = 0; i < ARRAY_SIZE; i++) {
+            if (base[i].getTransferRatio() != BASE_NULL) {
+                System.out.printf("%7d\t", base[i].getTransferRatio());
+            }
+        }
+        System.out.println();
         System.out.printf("%5s", "check");
         for (int i = 0; i < ARRAY_SIZE; i++) {
             if (base[i].getTransferRatio() != BASE_NULL) {
                 System.out.printf("%7d\t", check[i]);
+            }
+        }
+        System.out.println();
+        System.out.printf("%5s", "leaf");
+        for (int i = 0; i < ARRAY_SIZE; i++) {
+            if (base[i].getTransferRatio() != BASE_NULL) {
+                System.out.printf("%7s\t", base[i].isLeaf() ? "是" : "否");
+            }
+        }
+        System.out.println();
+        System.out.printf("%5s", "idx");
+        for (int i = 0; i < ARRAY_SIZE; i++) {
+            if (base[i].getTransferRatio() != BASE_NULL) {
+                System.out.printf("%7d\t", base[i].getValue());
             }
         }
         System.out.println();
@@ -194,7 +198,8 @@ public class DATrie {
                 endState += 1;
             } while (base[endState].getTransferRatio() != BASE_NULL);
 
-            base[startState].setTransferRatio(endState - offset); //改变父节点转移基数(这里有问题)
+            base[startState].setTransferRatio(endState - offset); //改变父节点转移基数
+
         }
 
         if (isLeaf) {
@@ -261,58 +266,40 @@ public class DATrie {
 
         List<String> words = new ArrayList<String>();
         words.add("清华");
-        /*words.add("清华大学");
+        words.add("清华大学");
         words.add("清新");
         words.add("中华");
         words.add("中华人民");
         words.add("华人");
         words.add("学生");
         words.add("大学生");
-        words.add("qin");
+        words.add("wo");
         words.add("shi");
-        words.add("ming");
-        words.add("yue");
-        words.add("zhi");
-        words.add("jun");
-        words.add("lin");
-        words.add("tian");
-        words.add("xia");
+        words.add("human");
+        words.add("this");
+        words.add("is");
+        words.add("ragty");
+        words.add("pump");
+        words.add("it");
+        words.add("up");
         words.add("中国");
         words.add("人名");
         words.add("中国人民");
         words.add("人民");
-        words.add("孙健");
-        words.add("CSDN");
         words.add("java");
         words.add("java学习");
 
-        //制作码表，以备验证
-        Set<Character> codes = new HashSet<Character>();
-        for (String word : words) {
-            char chars[] = word.toCharArray();
-            for (int i = 0; i < chars.length; i++) {
-                codes.add(chars[i]);
-            }
-        }
-        for (Character character : codes) {
-            System.out.printf("%6s\t", character.charValue());
-        }
-        System.out.println();
-        for (Character character : codes) {
-            System.out.printf("%6d\t",  (int)character.charValue());
-        }
-        System.out.println();
+
 
         //构建 Trie 树
         DATrie daTrie = new DATrie();
         daTrie.build(words);
         daTrie.printTrie();
 
-        //执行匹配
-//        List<Integer> result = daTrie.match("清华大学生都是华人");
-//        List<Integer> result = daTrie.match("中国人名识别是中国人民的一个骄傲.孙健人民在CSDN中学到了很多最早iteye是java学习笔记叫javaeye但是java123只是一部分");
-        List<Integer> result = daTrie.match("qinshimingyuezhijunlintianxia");
-
+        String keyWord = "清华大学生都是华人";
+        List<Integer> result = daTrie.match(keyWord);
+        System.out.println();
+        System.out.println("输入语句为："+keyWord);
 
         //打印匹配结果
         System.out.println();
@@ -325,20 +312,7 @@ public class DATrie {
             }
         }
         System.out.printf("}");
-        System.out.println();*/
-
-        DATrie daTrie = new DATrie();
-        daTrie.build(words);
-        daTrie.printTrie();
-
-        List<Integer> result = daTrie.match("清华");
-        for (int i = 0; i < result.size(); i++) {
-            if (i == 0) {
-                System.out.printf("%s", words.get(result.get(i)));
-            } else {
-                System.out.printf(", %s", words.get(result.get(i)));
-            }
-        }
+        System.out.println();
 
 
     }
