@@ -22,3 +22,4 @@
   - 逆向最长匹配算法
   - 双向最长匹配算法
 -   [字典树](<https://github.com/huoji555/NLP-Learing/tree/master/doc/char_01.md>)
+-   [双数组字典树](<https://github.com/huoji555/NLP-Learing/tree/master/doc/char_01.md>)

@@ -566,7 +566,7 @@ check[t] =  s
 
 那么这种算法相对于传统的`Trie树`的**优点**是，**只需要一个加法一次比较即可完成一次状态转移，只花费了常数时间**，下面给出了`双数组Trie树`的原理图（注意观察状态转移的过程）
 
-![](C:\Users\huoji\Desktop\1.png)
+![](https://img-blog.csdnimg.cn/20200310233002360.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2h1b2ppNTU1,size_16,color_FFFFFF,t_70)
 
 
 
@@ -757,7 +757,7 @@ private TrieNode insert(int startState, int offset, boolean isLeaf, int idx) {
 
 
 
-**双字典树的查询**
+**双数组字典树的查询**
 
 这里我写的比较简单，用**正向匹配**做的，这里比较关键的一句是这个
 
