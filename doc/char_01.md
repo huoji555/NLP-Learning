@@ -1207,3 +1207,509 @@ public class DATrie {
 }
 ```
 
+<br>
+
+
+
+###### 7.AC自动机
+
+**背景**
+
+之前的`Trie树`，`DBTrie`都属于前缀树，虽然DAT每次状态转移的时间复杂度都是常数，但全切分长度为n的文本时，时间复杂度为O(n^2)。这是因为**扫描过程中需要不断的挪动起点，发起新的查询**。所以说，DAT的全切分复杂度为O(n^2)。
+
+<br>
+
+**为什么需要AC自动机**
+
+显然，**前缀树的短板是扫描**，查询一个句子时，前缀树需要不断的挪动起点，发起新查询，这个过程浪费了大量时间。
+
+举个栗子，扫描"清华大学"这个短语，算法以"清"为起点扫描"清"，"清华"，"清华大"，“清华大学”，之后再回退到"华"，继续扫描"华"，"华大"......
+
+如果能够在扫描到"清华大学"的同时想办法知道，"华大学"，"大学"，"学"在不在字典树中，那么就可以省略掉这三次查询，观察一下这三个字符串，它们共享递进式的后缀，首尾对调后("学","学大"，"学大华")恰好可以用另一颗前缀树索引，称它为**后缀树**。
+
+**`AC(Aho-Corasick)自动机`的原理就是在前缀树的基础上，为前缀树上的每个节点建立一颗后缀树，从而节省了大量查询。**这使得每次扫描由原来的O(n^2)降到了O(n)，`AC自动机`现在被广泛的用于`多字符串匹配`。
+
+<br>
+
+
+
+**AC自动机的结构**
+
+- success表：用于状态的成功转移，本质上是一个前缀树
+- output表：记录命中的模式串
+- failture表：保存状态间的一对一的关系，存储状态转移失败后应当回退的最佳状态，这里的最佳状态是指能记住已匹配上的字符串的最长后缀的那个状态。
+
+<br>
+
+
+
+**AC自动机的构建过程**
+
+整体流程如下：
+
+- 添加模式串keyWord，构建树，根据seccess函数构建success表
+- 构建完成后，对树进行扫描，根据fail函数构建fail表
+- 外界输入文本，输出被命中的模式串
+
+下面以图为例，图来源于[ProcessOn](https://www.processon.com/view/5628c824e4b0d30f15b21aae):
+
+![](https://img-blog.csdnimg.cn/20200410154147229.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2h1b2ppNTU1,size_16,color_FFFFFF,t_70)
+
+<br>
+
+
+
+**建立success表**
+
+`sucess表`的本质是前缀树，所以构建不再赘述，唯一不同的是，根节点不光可以按第一层的节点转移(比如像图中的h和s)，还可以接受其它字符，转移终点都是自己。下面是构建代码：
+
+```java
+/**
+ *  @author: Ragty
+ *  @Date: 2020/4/1 14:22
+ *  @Description: success跳转
+ */
+public Node find(Character character) {
+    return map.get(character);
+}
+
+
+/**
+ *  @author: Ragty
+ *  @Date: 2020/4/1 14:23
+ *  @Description: 状态转移(此处的transition为转移的状态，可理解为接收的一个词)
+ */
+private Node nextState(Character transition) {
+    Node state = this.find(transition);             //先按success跳转
+
+    if (state != null) {
+        return state;
+    }
+
+    if (this.isRoot) {                              //如果跳转到根结点还是失败，则返回根结点
+        return this;
+    }
+
+    return this.failure.nextState(transition);      // 跳转失败，按failure跳转
+}
+```
+
+<br>
+
+
+
+**建立Fail表(核心)**
+
+`Fail表`保存的是状态(节点)间的一对一的关系，存储状态转移失败后应当回退的最佳状态(**敲黑板，看下面的实例讲解！！！**)。
+
+以图为例，匹配she之后到达状态5，再来一个字符，状态转移失败，此时，最长后缀为he，对应路径为0-1-2。因此，状态2是状态5 fail的最佳选择，fail到状态2之后，做好了接受r的准备。
+
+再比如，匹配his后到达状态7，此时his的最长后缀为is，但是途中没有找到is的路径，于是找次长后缀s，对应路径为0-3，因此状态7的最佳fail为3。
+
+下面是构建方法：
+
+- 将深度为1的节点设为根节点，**第二层中的节点的失败路径直接指向根节点**
+- **为深度大于1的节点建立fail表**，此处需要层序遍历，用BFS进行广度优先遍历。整个过程可以概括为一句话：设这个节点上的字母为C，沿着他父亲的失败指针走，直到找到一个节点，孩子节点也为C。然后把当前节点的fail指向刚找到的孩子节点C。如果一直走到了root都没找到，那就把fail指向root。
+
+下面是具体的构建代码：
+
+```java
+/**
+ *  @author: Ragty
+ *  @Date: 2020/4/1 16:04
+ *  @Description: 建立Fail表(核心,BFS遍历)
+ */
+private void constructFailureStates() {
+    Queue<Node> queue = new LinkedList<>();
+
+    for (Node depthOneState : this.root.children()) {
+        depthOneState.setFailure(this.root);
+        queue.add(depthOneState);
+    }
+    this.failureStatesConstructed = true;
+
+    while (!queue.isEmpty()) {
+        Node parentNode = queue.poll();
+        for (Character transition : parentNode.getTransitions()) {
+            Node childNode = parentNode.find(transition);
+            queue.add(childNode);
+            Node failNode = parentNode.getFailure().nextState(transition);   //在这里构建failNode
+            childNode.setFailure(failNode);
+            childNode.addEmit(failNode.emit());					//用路径后缀构建output表
+        }
+    }
+}
+
+```
+
+<br>
+
+
+
+**建立output表**
+
+`output表`用来记录命中的模式串，output表中的元素有两种：
+
+- **从初始状态到当前状态的路径本身对应的模式串**（比如2号状态的he）
+- **路径的后缀所对应的模式串**（比如5号状态中的he）
+
+所以output表的构造也分为两步：
+
+- 第一步与字典树类似，记录完整路径所对应的模式串
+- 第二步则是找出所有路径后缀及其模式串(这一步放在了构建fail表的最后)
+
+下面是构建代码：
+
+```java
+/**
+ *  @author: Ragty
+ *  @Date: 2020/4/1 15:10
+ *  @Description: 添加一个模式串(内部使用字典树构建)
+ */
+public void addKeyword(String keyword) {
+    if (keyword == null || keyword.length() == 0) {
+        return;
+    }
+
+    Node currentState = this.root;
+    for (Character character : keyword.toCharArray()) {
+        currentState = currentState.insert(character);
+    }
+    currentState.addEmit(keyword);
+}
+```
+
+<br>
+
+
+
+**模式匹配**
+
+模式匹配实现的功能是，**输入一段文本，输出AC自动机中所有匹配的词**，下面是实现代码：
+
+```java
+/**
+ *  @author: Ragty
+ *  @Date: 2020/4/1 17:43
+ *  @Description: 模式匹配
+ */
+public Collection<Emit> parseText(String text) {
+    checkForConstructedFailureStates();
+    Node currentState = this.root;
+    List<Emit> collectedEmits = new ArrayList<>();
+    for (int position = 0; position < text.length(); position++) {
+        Character character = text.charAt(position);
+        currentState = currentState.nextState(character);
+        Collection<String> emits = currentState.emit();
+        if (emits == null || emits.isEmpty()) {
+            continue;
+        }
+        for (String emit : emits) {
+            collectedEmits.add(new Emit(position - emit.length() + 1, position, emit));
+        }
+    }
+    return collectedEmits;
+}
+
+```
+
+<br>
+
+
+
+**单元测试**
+
+```java
+public static void main(String[] args) {
+    AhoCorasickTrie trie = new AhoCorasickTrie();
+    trie.addKeyword("hers");
+    trie.addKeyword("his");
+    trie.addKeyword("she");
+    trie.addKeyword("he");
+   
+    Collection<Emit> emits = trie.parseText("ushers");
+    for (Emit emit : emits) {
+        System.out.println(emit.start + " " + emit.end + "\t" + emit.getKeyword());
+    }
+}
+```
+
+输入文本为"ushers"时，输出结果为：
+
+```java
+1 3	she
+2 3	he
+2 5	hers
+```
+
+<br>
+
+
+
+**基于双数组字典树的AC自动机**
+
+基于双数组字典树的AC自动机会进一步优化，结构上只需将原来的success表的构建由Trie树替换为DATrie，效果上与双数组字典树不相上下，原因为：
+
+- 汉语中的词汇都不太长，前缀树的优势占了较大比重，AC自动机的fail机制发挥不了太大作用
+- 全切分需要将结果添加到链表，也会占用时间
+
+总结一下，**当含有短模式串时，优先用双数组字典树，否则优先使用基于双数组字典树的AC自动机**
+
+<br>
+
+
+
+**源码**
+
+```java
+public class AhoCorasickTrie {
+
+    private Boolean failureStatesConstructed = false;   //是否建立了failure表
+    private Node root;                                  //根结点
+
+
+    /**
+     *  @author: Ragty
+     *  @Date: 2020/4/1 13:49
+     *  @Description: ACTire初始化
+     */
+    public AhoCorasickTrie() {
+        this.root = new Node(true);
+    }
+
+
+
+    /**
+     *  @author: Ragty
+     *  @Date: 2020/4/1 13:54
+     *  @Description: ACTrie节点(内部用字典树构建)
+     *
+     */
+    private static class Node{
+    private Map<Character, Node> map;
+    private List<String> emits;         //输出
+    private Node failure;               //失败中转
+    private Boolean isRoot = false;     //是否为根结点
+
+
+    public Node(){
+        map = new HashMap<>();
+        emits = new ArrayList<>();
+    }
+
+
+    public Node(Boolean isRoot) {
+        this();
+        this.isRoot = isRoot;
+    }
+
+
+    public Node insert(Character character) {
+        Node node = this.map.get(character);
+        if (node == null) {
+            node = new Node();
+            map.put(character, node);
+        }
+        return node;
+    }
+
+
+        public void addEmit(String keyword) {
+            emits.add(keyword);
+        }
+
+
+        public void addEmit(Collection<String> keywords) {
+            emits.addAll(keywords);
+        }
+
+
+        /**
+         *  @author: Ragty
+         *  @Date: 2020/4/1 14:22
+         *  @Description: success跳转
+         */
+        public Node find(Character character) {
+            return map.get(character);
+        }
+
+
+        /**
+         *  @author: Ragty
+         *  @Date: 2020/4/1 14:23
+         *  @Description: 状态转移(此处的transition为转移的状态，可理解为接收的一个词)
+         */
+        private Node nextState(Character transition) {
+            Node state = this.find(transition);             //先按success跳转
+
+            if (state != null) {
+                return state;
+            }
+
+            if (this.isRoot) {                              //如果跳转到根结点还是失败，则返回根结点
+                return this;
+            }
+
+            return this.failure.nextState(transition);      // 跳转失败，按failure跳转
+        }
+
+
+        public Collection<Node> children() {
+            return this.map.values();
+        }
+
+
+        public void setFailure(Node node) {
+            failure = node;
+        }
+
+
+        public Node getFailure() {
+            return failure;
+        }
+
+
+        public Set<Character> getTransitions() {
+            return map.keySet();
+        }
+
+
+        public Collection<String> emit() {
+            return this.emits == null ? Collections.<String>emptyList() : this.emits;
+        }
+    }
+
+
+
+    /**
+     *  @author: Ragty
+     *  @Date: 2020/4/1 15:01
+     *  @Description: 模式串(用于模式串匹配)
+     */
+    private static class Emit{
+        private final String keyword;   //匹配到的模式串
+        private final int start;        //起点
+        private final int end;          //终点
+
+        public Emit(final int start, final int end, final String keyword) {
+            this.start = start;
+            this.end = end;
+            this.keyword = keyword;
+        }
+
+        public String getKeyword() {
+            return this.keyword;
+        }
+
+        @Override
+        public String toString() {
+            return super.toString() + "=" + this.keyword;
+        }
+    }
+
+
+
+    /**
+     *  @author: Ragty
+     *  @Date: 2020/4/1 15:10
+     *  @Description: 添加一个模式串(内部使用字典树构建)
+     */
+    public void addKeyword(String keyword) {
+        if (keyword == null || keyword.length() == 0) {
+            return;
+        }
+
+        Node currentState = this.root;
+        for (Character character : keyword.toCharArray()) {
+            currentState = currentState.insert(character);
+        }
+        currentState.addEmit(keyword);          //记录完整路径的output表(第一步)
+    }
+
+
+
+    /**
+     *  @author: Ragty
+     *  @Date: 2020/4/1 17:43
+     *  @Description: 模式匹配
+     */
+    public Collection<Emit> parseText(String text) {
+        checkForConstructedFailureStates();
+        Node currentState = this.root;
+        List<Emit> collectedEmits = new ArrayList<>();
+        for (int position = 0; position < text.length(); position++) {
+            Character character = text.charAt(position);
+            currentState = currentState.nextState(character);
+            Collection<String> emits = currentState.emit();
+            if (emits == null || emits.isEmpty()) {
+                continue;
+            }
+            for (String emit : emits) {
+                collectedEmits.add(new Emit(position - emit.length() + 1, position, emit));
+            }
+        }
+        return collectedEmits;
+    }
+
+
+
+    /**
+     *  @author: Ragty
+     *  @Date: 2020/4/1 16:04
+     *  @Description: 建立Fail表(核心,BFS遍历)
+     */
+    private void constructFailureStates() {
+        Queue<Node> queue = new LinkedList<>();
+
+        for (Node depthOneState : this.root.children()) {
+            depthOneState.setFailure(this.root);
+            queue.add(depthOneState);
+        }
+        this.failureStatesConstructed = true;
+
+        while (!queue.isEmpty()) {
+            Node parentNode = queue.poll();
+            for (Character transition : parentNode.getTransitions()) {
+                Node childNode = parentNode.find(transition);
+                queue.add(childNode);
+                Node failNode = parentNode.getFailure().nextState(transition);   //在这里构建failNode
+                childNode.setFailure(failNode);
+                childNode.addEmit(failNode.emit());                             //用路径后缀构建output表(第二步)
+            }
+        }
+    }
+
+
+
+    /**
+     *  @author: Ragty
+     *  @Date: 2020/4/1 15:28
+     *  @Description: 检查是否建立了Fail表(若没建立，则建立)
+     */
+    private void checkForConstructedFailureStates() {
+        if (!this.failureStatesConstructed) {
+            constructFailureStates();
+        }
+    }
+
+
+    public static void main(String[] args) {
+        AhoCorasickTrie trie = new AhoCorasickTrie();
+        trie.addKeyword("hers");
+        trie.addKeyword("his");
+        trie.addKeyword("she");
+        trie.addKeyword("he");
+
+        Collection<Emit> emits = trie.parseText("ushers");
+        for (Emit emit : emits) {
+            System.out.println(emit.start + " " + emit.end + "\t" + emit.getKeyword());
+        }
+    }
+
+
+}
+
+```
+
+
+
