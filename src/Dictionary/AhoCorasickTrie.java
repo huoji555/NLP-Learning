@@ -28,32 +28,32 @@ public class AhoCorasickTrie {
      *
      */
     private static class Node{
-        private Map<Character, Node> map;
-        private List<String> emits;         //输出
-        private Node failure;               //失败中转
-        private Boolean isRoot = false;     //是否为根结点
+    private Map<Character, Node> map;
+    private List<String> emits;         //输出
+    private Node failure;               //失败中转
+    private Boolean isRoot = false;     //是否为根结点
 
 
-        public Node(){
-            map = new HashMap<>();
-            emits = new ArrayList<>();
+    public Node(){
+        map = new HashMap<>();
+        emits = new ArrayList<>();
+    }
+
+
+    public Node(Boolean isRoot) {
+        this();
+        this.isRoot = isRoot;
+    }
+
+
+    public Node insert(Character character) {
+        Node node = this.map.get(character);
+        if (node == null) {
+            node = new Node();
+            map.put(character, node);
         }
-
-
-        public Node(Boolean isRoot) {
-            this();
-            this.isRoot = isRoot;
-        }
-
-
-        public Node insert(Character character) {
-            Node node = this.map.get(character);
-            if (node == null) {
-                node = new Node();
-                map.put(character, node);
-            }
-            return node;
-        }
+        return node;
+    }
 
 
         public void addEmit(String keyword) {
@@ -151,7 +151,6 @@ public class AhoCorasickTrie {
 
 
 
-
     /**
      *  @author: Ragty
      *  @Date: 2020/4/1 15:10
@@ -166,13 +165,8 @@ public class AhoCorasickTrie {
         for (Character character : keyword.toCharArray()) {
             currentState = currentState.insert(character);
         }
-        currentState.addEmit(keyword);
+        currentState.addEmit(keyword);          //记录完整路径的output表(第一步)
     }
-
-
-
-
-
 
 
 
@@ -222,7 +216,7 @@ public class AhoCorasickTrie {
                 queue.add(childNode);
                 Node failNode = parentNode.getFailure().nextState(transition);   //在这里构建failNode
                 childNode.setFailure(failNode);
-                childNode.addEmit(failNode.emit());
+                childNode.addEmit(failNode.emit());                             //用路径后缀构建output表(第二步)
             }
         }
     }
@@ -249,11 +243,8 @@ public class AhoCorasickTrie {
         trie.addKeyword("his");
         trie.addKeyword("she");
         trie.addKeyword("he");
-        trie.addKeyword("你好");
-        trie.addKeyword("你好嘛");
-        trie.addKeyword("好人");
 
-        Collection<Emit> emits = trie.parseText("你好嘛好人");
+        Collection<Emit> emits = trie.parseText("ushers");
         for (Emit emit : emits) {
             System.out.println(emit.start + " " + emit.end + "\t" + emit.getKeyword());
         }
