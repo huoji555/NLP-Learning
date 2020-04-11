@@ -183,6 +183,16 @@ public class DATrie {
 
     /**
      *  @author: Ragty
+     *  @Date: 2020/4/11 12:54
+     *  @Description: 检查DATrie中是否存在关键词
+     */
+    public boolean containsKey(String keyWord) {
+        return match(keyWord).size() > 0;
+    }
+
+
+    /**
+     *  @author: Ragty
      *  @Date: 2020/3/5 18:49
      *  @Description: 根据起始状态和转移技术插入新节点并返回插入的节点
      *  @param startState 起始状态
@@ -313,7 +323,6 @@ public class DATrie {
         }
         System.out.printf("}");
         System.out.println();
-
 
     }
 
