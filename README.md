@@ -24,4 +24,5 @@
 -   [字典树](<https://github.com/huoji555/NLP-Learing/tree/master/doc/char_01.md>)
 -   [双数组字典树](<https://github.com/huoji555/NLP-Learing/tree/master/doc/char_01.md>)
 -   [AC自动机](<https://github.com/huoji555/NLP-Learing/tree/master/doc/char_01.md>)
+-   [停止词过滤原理及实现](<https://github.com/huoji555/NLP-Learing/tree/master/doc/char_01.md>)
 

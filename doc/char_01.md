@@ -1713,3 +1713,129 @@ public class AhoCorasickTrie {
 
 
 
+###### 8.停止词过滤原理及实现
+
+**停用词**
+
+**指语言中一类没有多少意义的词语**，比如`“的”`，`“甚至”`，`“不仅”`，`“吧”`......
+
+一个句子去掉了停用词并不影响理解，停用词视具体的任务不同而不同。停用词过滤是一个常见的预处理过程
+
+<br>
+
+
+
+**实现思路**
+
+- **加载中止词**：IO加载中止词([中止词下载地址](<https://blog.csdn.net/u010533386/article/details/51458591>)，复制粘贴保存为txt文本)
+- **分词**：使用HanLP进行分词
+- **停用词过滤**：从分词结果中去除中止词
+
+<br>
+
+
+
+**加载中止词**
+
+这里最简单的做法是把中止词直接加入List中，但当词过多时，会浪费大量空间和查询时间，考虑到中文词大部分较短，这里使用**双数组字典树(DATrie)**构建，不熟悉双数组字典树的可以看[这里](<https://blog.csdn.net/huoji555/article/details/104786615>)，下面是构建代码：
+
+```java
+/**
+ *  @author: Ragty
+ *  @Date: 2020/4/11 12:37
+ *  @Description: 加载字典到DATrie
+ */
+public static DATrie loadStopword(String path) throws IOException {
+
+    BufferedReader bufferedReader = new BufferedReader(new FileReader(stopWordsPath));
+    List<String> stopWords = new ArrayList<String>();
+    String temp = null;
+
+    while ((temp = bufferedReader.readLine()) != null) {
+        stopWords.add(temp.trim());
+    }
+
+    DATrie daTrie = new DATrie();
+    daTrie.build(stopWords);
+    return daTrie;
+}
+```
+
+<br>
+
+
+
+**分词**
+
+这里分词我们使用`HanLP`进行分词，不熟悉的可参考[配置](<https://github.com/hankcs/HanLP>)，下面是分词代码：
+
+```java
+/**
+ *  @author: Ragty
+ *  @Date: 2020/4/11 12:41
+ *  @Description: HanLP分词
+ */
+private static List<Term> segment(String text) {
+    List<Term> list = HanLP.segment(text);
+    return list;
+}
+
+```
+
+<br>
+
+
+
+**停止词过滤**
+
+这里直接从构建好的`DATrie`上查询，匹配到就停止词，就去掉，下面是实现代码：
+
+```java
+/**
+ *  @author: Ragty
+ *  @Date: 2020/4/11 13:17
+ *  @Description: 停用词过滤
+ */
+public static List<Term> removeStopWords(String text, DATrie daTrie) {
+
+    List<Term> list = segment(text);
+    ListIterator<Term> listIterator = list.listIterator();
+
+    while(listIterator.hasNext()) {
+        if (daTrie.containsKey(listIterator.next().word)) {
+            listIterator.remove();
+        }
+    }
+
+    return list;
+}
+```
+
+<br>
+
+
+
+**测试用例**
+
+```java
+public static void main(String[] args) throws IOException {
+    String text = "原来的路已经看不到了，只剩远方模糊的身影";
+    DATrie daTrie = loadStopword(text);
+
+    System.out.println("源文本："+ text);
+    System.out.println("分词结果："+ segment(text));
+    System.out.println("停用词过滤：" + removeStopWords(text,daTrie));
+}
+```
+
+<br>
+
+
+
+**测试结果**
+
+```java
+源文本：原来的路已经看不到了，只剩远方模糊的身影
+分词结果：[原来/d, 的/ude1, 路/n, 已经/d, 看不到/v, 了/ule, ，/w, 只剩/v, 远方/s, 模糊/a, 的/ude1, 身影/n]
+停用词过滤：[路/n, ，/w, 模糊/a, 身影/n]
+```
